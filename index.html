@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Code → Object Converter Pro</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:system-ui, Arial;
+}
+
+body{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(135deg,#000,#0a0a0a,#0a1a2f);
+  color:white;
+  overflow:hidden;
+}
+
+header{
+  padding:12px 16px;
+  font-weight:600;
+  border-bottom:1px solid #ffffff20;
+}
+
+/* CLEAR BUTTON (NEW) */
+.clear-btn{
+  position:fixed;
+  top:10px;
+  left:10px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.08);
+  color:white;
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:8px;
+  cursor:pointer;
+  z-index:10000;
+}
+
+/* LAYOUT */
+.container{
+  flex:1;
+  display:flex;
+  gap:12px;
+  padding:10px;
+  overflow:hidden;
+}
+
+/* PANELS */
+.panel{
+  flex:1;
+  min-width:280px;
+  display:flex;
+  flex-direction:column;
+  background:#0d0d0d;
+  border:1px solid #ffffff15;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+/* LABEL */
+label{
+  padding:6px 10px;
+  font-size:12px;
+  color:#aaa;
+  border-bottom:1px solid #ffffff10;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+/* TEXTAREA */
+textarea{
+  flex:1;
+  min-height:0;
+  background:#0d0d0d;
+  color:#eaeaea;
+  border:none;
+  outline:none;
+  padding:10px;
+  resize:none;
+  font-size:13px;
+}
+
+/* OUTPUT */
+.output{
+  white-space:pre;
+  font-size:12px;
+  padding:10px;
+  overflow:auto;
+  background:#050505;
+  flex:1;
+}
+
+/* BUTTON */
+.mini-btn{
+  font-size:10px;
+  padding:3px 8px;
+  background:#00d4ff;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  color:black;
+  font-weight:600;
+}
+
+/* PREVIEW */
+.preview-box{
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  width:45vw;
+  height:55vh;
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 0 25px rgba(0,0,0,0.6);
+  border:2px solid #00d4ff;
+  z-index:9999;
+}
+
+.preview-box iframe{
+  width:100%;
+  height:100%;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<header>⚡ Code → Object Converter (Smart Clipboard Mode)</header>
+
+<!-- CLEAR BUTTON -->
+<button class="clear-btn" onclick="clearAll()">clear</button>
+
+<div class="container">
+
+  <div class="panel">
+    <label>HTML <button class="mini-btn" onclick="setActive('html'); smartPaste()">paste</button></label>
+    <textarea id="html" placeholder="Paste HTML here"></textarea>
+
+    <label>CSS <button class="mini-btn" onclick="setActive('css'); smartPaste()">paste</button></label>
+    <textarea id="css" placeholder="Paste CSS here"></textarea>
+
+    <label>JS <button class="mini-btn" onclick="setActive('js'); smartPaste()">paste</button></label>
+    <textarea id="js" placeholder="Paste JS here"></textarea>
+  </div>
+
+  <div class="panel">
+    <label>
+      OUTPUT
+      <button class="mini-btn" onclick="copyCode()">copy</button>
+    </label>
+
+    <div class="output" id="output"></div>
+  </div>
+
+</div>
+
+<!-- PREVIEW -->
+<div class="preview-box">
+  <iframe id="preview"></iframe>
+</div>
+
+<script>
+
+let activeField = null;
+
+/* set active textarea */
+function setActive(id){
+  activeField = document.getElementById(id);
+  activeField.focus();
+}
+
+/* smart clipboard */
+async function smartPaste(){
+  if(!activeField) return;
+
+  try {
+    const text = await navigator.clipboard.readText();
+    if(text){
+      activeField.value += text;
+      update();
+    }
+  } catch (e) {
+    activeField.focus();
+  }
+}
+
+/* fallback paste */
+document.addEventListener("paste", function(e){
+  if(!activeField) return;
+
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+
+  activeField.value += text;
+
+  update();
+
+  activeField = null;
+});
+
+/* escape */
+function escapeStr(str){
+  return str
+    .replace(/\\/g,"\\\\")
+    .replace(/"/g,'\\"')
+    .replace(/\n/g,"\\n");
+}
+
+/* UPDATE (FIXED COMMA ADDED) */
+function update(){
+
+  const html = document.getElementById("html").value;
+  const css = document.getElementById("css").value;
+  const js = document.getElementById("js").value;
+
+  const obj = `{
+  name: "Generated Component",
+  html: "${escapeStr(html)}",
+  css: "${escapeStr(css)}",
+  js: "${escapeStr(js)}"
+},`;
+
+  document.getElementById("output").innerText = obj;
+
+  const preview = `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background:#fff;
+}
+${css}
+</style>
+</head>
+
+<body>
+${html}
+
+<script>${js}<\/script>
+</body>
+</html>`;
+
+  document.getElementById("preview").srcdoc = preview;
+}
+
+/* COPY */
+function copyCode(){
+  navigator.clipboard.writeText(
+    document.getElementById("output").innerText
+  );
+}
+
+/* CLEAR */
+function clearAll(){
+  document.getElementById("html").value = "";
+  document.getElementById("css").value = "";
+  document.getElementById("js").value = "";
+  update();
+}
+
+/* LIVE */
+["html","css","js"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", update);
+});
+
+update();
+
+</script>
+
+</body>
+</html>
