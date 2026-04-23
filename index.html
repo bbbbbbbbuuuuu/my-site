@@ -2,280 +2,184 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Code → Object Converter Pro</title>
+<title>Live Converter Tool</title>
 
 <style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:system-ui, Arial;
+body {
+  margin: 0;
+  font-family: monospace;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100vh;
+  background: #0b0b0f;
+  color: white;
 }
 
-body{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  background:linear-gradient(135deg,#000,#0a0a0a,#0a1a2f);
-  color:white;
-  overflow:hidden;
+.left {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-right: 1px solid #222;
 }
 
-header{
-  padding:12px 16px;
-  font-weight:600;
-  border-bottom:1px solid #ffffff20;
+textarea {
+  height: 30%;
+  background: #111;
+  color: #0ff;
+  border: none;
+  padding: 10px;
+  outline: none;
+  resize: none;
 }
 
-/* CLEAR BUTTON (NEW) */
-.clear-btn{
-  position:fixed;
-  top:10px;
-  left:10px;
-  padding:8px 12px;
-  background:rgba(255,255,255,0.08);
-  color:white;
-  border:1px solid rgba(255,255,255,0.2);
-  border-radius:8px;
-  cursor:pointer;
-  z-index:10000;
+textarea:focus {
+  border: 1px solid #6366f1;
 }
 
-/* LAYOUT */
-.container{
-  flex:1;
-  display:flex;
-  gap:12px;
-  padding:10px;
-  overflow:hidden;
+.right {
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-/* PANELS */
-.panel{
-  flex:1;
-  min-width:280px;
-  display:flex;
-  flex-direction:column;
-  background:#0d0d0d;
-  border:1px solid #ffffff15;
-  border-radius:12px;
-  overflow:hidden;
+iframe {
+  flex: 1;
+  border: none;
+  background: white;
 }
 
-/* LABEL */
-label{
-  padding:6px 10px;
-  font-size:12px;
-  color:#aaa;
-  border-bottom:1px solid #ffffff10;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+pre {
+  height: 40%;
+  margin: 0;
+  padding: 10px;
+  background: #111;
+  color: #0f0;
+  overflow: auto;
+  cursor: pointer;
 }
 
-/* TEXTAREA */
-textarea{
-  flex:1;
-  min-height:0;
-  background:#0d0d0d;
-  color:#eaeaea;
-  border:none;
-  outline:none;
-  padding:10px;
-  resize:none;
-  font-size:13px;
+.clear-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: #ff003c;
+  color: white;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 12px;
+  transition: 0.2s;
 }
 
-/* OUTPUT */
-.output{
-  white-space:pre;
-  font-size:12px;
-  padding:10px;
-  overflow:auto;
-  background:#050505;
-  flex:1;
-}
-
-/* BUTTON */
-.mini-btn{
-  font-size:10px;
-  padding:3px 8px;
-  background:#00d4ff;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-  color:black;
-  font-weight:600;
-}
-
-/* PREVIEW */
-.preview-box{
-  position:fixed;
-  bottom:10px;
-  right:10px;
-  width:45vw;
-  height:55vh;
-  background:white;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 0 25px rgba(0,0,0,0.6);
-  border:2px solid #00d4ff;
-  z-index:9999;
-}
-
-.preview-box iframe{
-  width:100%;
-  height:100%;
-  border:none;
+.clear-btn:hover {
+  background: #ff3366;
+  transform: scale(1.05);
 }
 </style>
 </head>
 
 <body>
 
-<header>⚡ Code → Object Converter (Smart Clipboard Mode)</header>
-
-<!-- CLEAR BUTTON -->
-<button class="clear-btn" onclick="clearAll()">clear</button>
-
-<div class="container">
-
-  <div class="panel">
-    <label>HTML <button class="mini-btn" onclick="setActive('html'); smartPaste()">paste</button></label>
-    <textarea id="html" placeholder="Paste HTML here"></textarea>
-
-    <label>CSS <button class="mini-btn" onclick="setActive('css'); smartPaste()">paste</button></label>
-    <textarea id="css" placeholder="Paste CSS here"></textarea>
-
-    <label>JS <button class="mini-btn" onclick="setActive('js'); smartPaste()">paste</button></label>
-    <textarea id="js" placeholder="Paste JS here"></textarea>
-  </div>
-
-  <div class="panel">
-    <label>
-      OUTPUT
-      <button class="mini-btn" onclick="copyCode()">copy</button>
-    </label>
-
-    <div class="output" id="output"></div>
-  </div>
-
+<!-- LEFT -->
+<div class="left">
+  <textarea id="html" placeholder="HTML (click to paste)"></textarea>
+  <textarea id="css" placeholder="CSS (click to paste)"></textarea>
+  <textarea id="js" placeholder="JS (click to paste)"></textarea>
 </div>
 
-<!-- PREVIEW -->
-<div class="preview-box">
+<!-- RIGHT -->
+<div class="right">
+
+  <button class="clear-btn" onclick="clearAll()">CLEAR</button>
+
   <iframe id="preview"></iframe>
+  <pre id="output">Click to copy JSON</pre>
+
 </div>
 
 <script>
 
-let activeField = null;
-
-/* set active textarea */
-function setActive(id){
-  activeField = document.getElementById(id);
-  activeField.focus();
-}
-
-/* smart clipboard */
-async function smartPaste(){
-  if(!activeField) return;
-
-  try {
-    const text = await navigator.clipboard.readText();
-    if(text){
-      activeField.value += text;
+// paste on click
+async function enablePaste(id) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      el.value = text;
       update();
-    }
-  } catch (e) {
-    activeField.focus();
-  }
+    } catch {}
+  });
 }
 
-/* fallback paste */
-document.addEventListener("paste", function(e){
-  if(!activeField) return;
+enablePaste("html");
+enablePaste("css");
+enablePaste("js");
 
-  const text = (e.clipboardData || window.clipboardData).getData("text");
-
-  activeField.value += text;
-
-  update();
-
-  activeField = null;
-});
-
-/* escape */
-function escapeStr(str){
-  return str
-    .replace(/\\/g,"\\\\")
-    .replace(/"/g,'\\"')
-    .replace(/\n/g,"\\n");
+// build preview
+function build(html, css, js) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<style>${css}</style>
+</head>
+<body>
+${html}
+<script>${js}<\/script>
+</body>
+</html>`;
 }
 
-/* UPDATE (FIXED COMMA ADDED) */
-function update(){
-
+// live update
+function update() {
   const html = document.getElementById("html").value;
   const css = document.getElementById("css").value;
   const js = document.getElementById("js").value;
 
-  const obj = `{
-  name: "Generated Component",
-  html: "${escapeStr(html)}",
-  css: "${escapeStr(css)}",
-  js: "${escapeStr(js)}"
-},`;
+  document.getElementById("preview").srcdoc = build(html, css, js);
 
-  document.getElementById("output").innerText = obj;
+  const output = {
+    id: "test-button",
+    name: "Test Button",
+    category: "Buttons",
+    tags: ["test", "ui"],
+    html: "`" + html + "`",
+    css: "`" + css + "`",
+    js: "`" + js + "`",
+    authorId: "system",
+    createdAt: new Date().toISOString()
+  };
 
-  const preview = `
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-html,body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  background:#fff;
-}
-${css}
-</style>
-</head>
-
-<body>
-${html}
-
-<script>${js}<\/script>
-</body>
-</html>`;
-
-  document.getElementById("preview").srcdoc = preview;
+  // 🔥 comma added here
+  document.getElementById("output").textContent =
+    JSON.stringify(output, null, 2) + ",";
 }
 
-/* COPY */
-function copyCode(){
+// typing update
+document.querySelectorAll("textarea").forEach(t => {
+  t.addEventListener("input", update);
+});
+
+// copy output (no alert)
+document.getElementById("output").addEventListener("click", () => {
   navigator.clipboard.writeText(
-    document.getElementById("output").innerText
+    document.getElementById("output").textContent
   );
-}
+});
 
-/* CLEAR */
-function clearAll(){
+// clear all
+function clearAll() {
   document.getElementById("html").value = "";
   document.getElementById("css").value = "";
   document.getElementById("js").value = "";
   update();
 }
 
-/* LIVE */
-["html","css","js"].forEach(id=>{
-  document.getElementById(id).addEventListener("input", update);
-});
-
+// init
 update();
 
 </script>
